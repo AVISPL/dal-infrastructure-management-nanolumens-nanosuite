@@ -17,7 +17,6 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class SystemInformation {
 	private String systemName;
-
 	private String systemHostname;
 	private String timezone;
 

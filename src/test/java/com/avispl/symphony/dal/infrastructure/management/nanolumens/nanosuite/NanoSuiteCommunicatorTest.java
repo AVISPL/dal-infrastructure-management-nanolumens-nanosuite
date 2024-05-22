@@ -37,7 +37,7 @@ class NanoSuiteCommunicatorTest {
 	@BeforeEach
 	void setUp() throws Exception {
 		nanoSuiteCommunicator = new NanoSuiteCommunicator();
-		nanoSuiteCommunicator.setTrustAllCertificates(false);
+		nanoSuiteCommunicator.setTrustAllCertificates(true);
 		nanoSuiteCommunicator.setHost("");
 		nanoSuiteCommunicator.setLogin("");
 		nanoSuiteCommunicator.setPassword("");
@@ -59,7 +59,7 @@ class NanoSuiteCommunicatorTest {
 	void testTCPPing() throws Exception {
 		nanoSuiteCommunicator = new NanoSuiteCommunicator();
 
-		nanoSuiteCommunicator.setTrustAllCertificates(false);
+		nanoSuiteCommunicator.setTrustAllCertificates(true);
 		nanoSuiteCommunicator.setProtocol("http");
 		nanoSuiteCommunicator.setPort(80);
 		nanoSuiteCommunicator.setHost("");
@@ -79,7 +79,7 @@ class NanoSuiteCommunicatorTest {
 		nanoSuiteCommunicator.destroy();
 		nanoSuiteCommunicator = new NanoSuiteCommunicator();
 
-		nanoSuiteCommunicator.setTrustAllCertificates(false);
+		nanoSuiteCommunicator.setTrustAllCertificates(true);
 		nanoSuiteCommunicator.setProtocol("http");
 		nanoSuiteCommunicator.setPort(80);
 		nanoSuiteCommunicator.setHost("");
@@ -92,7 +92,7 @@ class NanoSuiteCommunicatorTest {
 
 	/**
 	 * Test case to verify ResourceNotReachableException exception should be thrown when unable to send request to nanosuite
-	 * @throws Exception
+	 *
 	 */
 	@Test
 	void testFailedToSendCommand() throws Exception {

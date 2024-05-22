@@ -103,7 +103,7 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 				try {
 					TimeUnit.MICROSECONDS.sleep(500);
 				} catch (InterruptedException e) {
-					logger.info(String.format("Sleep for 0.5 second was interrupted with error message %s", e.getMessage()));
+					logger.info(String.format("Sleep for 0.5 second was interrupted with error message: %s", e.getMessage()));
 				}
 
 				if (!inProgress) {
@@ -129,7 +129,7 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 					try {
 						TimeUnit.MILLISECONDS.sleep(1000);
 					} catch (InterruptedException e) {
-						logger.info(String.format("Sleep for 1 second was interrupted with error message %s", e.getMessage()));
+						logger.info(String.format("Sleep for 1 second was interrupted with error message: %s", e.getMessage()));
 					}
 				}
 
@@ -212,7 +212,7 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 	private final ObjectMapper objectMapper = new ObjectMapper();
 
 	/**
-	 * Executor that runs all the async operations, that is posting and
+	 * Executor that runs all the async operations
 	 */
 	private ExecutorService executorService;
 
@@ -244,7 +244,7 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 	private final Map<String, Map<String,JsonNode>> cachedData = Collections.synchronizedMap(new HashMap<>());
 
 	/**
-	 * List of System Response
+	 * System Response for aggregator
 	 */
 	private SystemInformation systemInformation = new SystemInformation();
 
@@ -257,6 +257,11 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 	 * Configurable property for historical properties, comma separated values kept as set locally
 	 */
 	private final Set<String> historicalProperties = new HashSet<>();
+
+	/**
+	 * Number of thread
+	 */
+	private String numberThreads;
 
 	/**
 	 * Retrieves {@link #historicalProperties}
@@ -280,11 +285,6 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 	}
 
 	/**
-	 * Number of thread
-	 */
-	private String numberThreads;
-
-	/**
 	 * Retrieves {@link #numberThreads}
 	 *
 	 * @return value of {@link #numberThreads}
@@ -300,13 +300,6 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 	 */
 	public void setNumberThreads(String numberThreads) {
 		this.numberThreads = numberThreads;
-	}
-
-	/**
-	 * Constructs a new instance of NanoSuiteCommunicator.
-	 */
-	public NanoSuiteCommunicator() {
-		this.setTrustAllCertificates(false);
 	}
 
 	/**
@@ -343,6 +336,13 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 	 */
 	public void setPingMode(String pingMode) {
 		this.pingMode = PingMode.ofString(pingMode);
+	}
+
+	/**
+	 * Constructs a new instance of NanoSuiteCommunicator.
+	 */
+	public NanoSuiteCommunicator() {
+		this.setTrustAllCertificates(true);
 	}
 
 	/**
@@ -504,7 +504,7 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 
 	/**
 	 * Populates system information into the provided stats map
-	 * System information includes properties from the {@link SystemInformation} enumeration.
+	 * System information includes properties from the {@link SystemInformation} object.
 	 *
 	 * @param stats The map to store system information properties.
 	 */
@@ -517,7 +517,7 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 
 	/**
 	 * Populates device details using multiple threads.
-	 * Retrieves aggregated data for each device in the device list concurrently.
+	 * Retrieves aggregated data for each device in the cached concurrently.
 	 */
 	private void populateDeviceDetails() {
 		int numberOfThreads = getDefaultNumberOfThread();
@@ -545,6 +545,7 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 				if (!profileType.getName().equalsIgnoreCase(ProfileType.NOVASTAR_SCREEN.getName())) {
 					String url = createFilterUrl(profileType, deviceName);
 					JsonNode response = this.doGet(url, JsonNode.class);
+
 					if (response != null && !StringUtils.isNullOrEmpty(response.toString()) && !NanoSuiteConstant.ERROR.contains(response.toString())) {
 						Map<String, JsonNode> assets = new HashMap<>();
 						assets.put(profileType.getValue(), response);
@@ -649,10 +650,10 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 	}
 
 	/**
-	 * create a specific url for fetching asset type base on filter
+	 * create a specific url for fetching asset type base on screen name
 	 */
-	private String createFilterUrl(ProfileType profileType, String screenNameFilter) {
-		 return String.format(NanoSuiteConstant.FILTER_ASSET_URL, profileType.getValue(), !StringUtils.isNullOrEmpty(this.screenNameFilter)? this.screenNameFilter : screenNameFilter);
+	private String createFilterUrl(ProfileType profileType, String screenName) {
+		 return String.format(NanoSuiteConstant.FILTER_ASSET_URL, profileType.getValue(), !StringUtils.isNullOrEmpty(this.screenNameFilter)? this.screenNameFilter : screenName);
 	}
 
 	/**
@@ -773,7 +774,7 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 	}
 
 	/**
-	 * Check null value
+	 * Check null or empty value
 	 *
 	 * @param value the value is JsonNode value
 	 * @return String / None if value is empty
