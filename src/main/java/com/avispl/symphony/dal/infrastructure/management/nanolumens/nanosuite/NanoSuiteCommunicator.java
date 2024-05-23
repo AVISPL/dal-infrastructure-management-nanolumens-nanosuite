@@ -75,6 +75,78 @@ import com.avispl.symphony.dal.util.StringUtils;
  *   <li>SubsystemId</li>
  * </ul>
  *
+ * Sender Asset Group
+ * <ul>
+ *   	<li>InputSource</li>
+ * 		<li>InputValidDisplayPort</li>
+ * 		<li>InputValidDVI1</li>
+ * 		<li>InputValidDVI2</li>
+ * 		<li>InputValidDVI3</li>
+ * 		<li>InputValidDVI4</li>
+ * 		<li>InputValidSDI</li>
+ * 		<li>InputValid</li>
+ * 		<li>Model</li>
+ * 		<li>SerialNumber</li>
+ * 		<li>VersionFPGA</li>
+ * 		<li>VersionMCU</li>
+ * 		<li>ProfileType</li>
+ * 		<li>HealthState</li>
+ * </ul>
+ *
+ * Receiver Asset Group
+ * <ul>
+ *   	<li>BrightnessBlue</li>
+ * 		<li>BrightnessGreen</li>
+ * 		<li>BrightnessRed</li>
+ * 		<li>BrightnessVRed</li>
+ * 		<li>Brightness</li>
+ * 		<li>Gamma</li>
+ * 		<li>Model</li>
+ * 		<li>Temperature(C)</li>
+ * 		<li>VersionFPGA</li>
+ * 		<li>VersionMCU</li>
+ * 		<li>VersionSoftware</li>
+ * 		<li>VideoBlackout</li>
+ * 		<li>VideoFreeze</li>
+ * 		<li>VideoMapping</li>
+ * 		<li>VideoTest</li>
+ * 		<li>Voltage(V)</li>
+ * 		<li>ProfileType</li>
+ * 		<li>HealthState</li>
+ * </ul>
+ *
+ * Screen Asset Group
+ * <ul>
+ *   	<li>InputSource</li>
+ * 		<li>InputValidDisplayPort</li>
+ * 		<li>InputValidDVI1</li>
+ * 		<li>InputValidDVI2</li>
+ * 		<li>InputValidDVI3</li>
+ * 		<li>InputValidDVI4</li>
+ * 		<li>InputValidSDI</li>
+ * 		<li>InputValid</li>
+ * 		<li>Model</li>
+ * 		<li>SerialNumber</li>
+ * 		<li>VersionFPGA</li>
+ * 		<li>VersionMCU</li>
+ *   	<li>BrightnessBlue</li>
+ * 		<li>BrightnessGreen</li>
+ * 		<li>BrightnessRed</li>
+ * 		<li>BrightnessVRed</li>
+ * 		<li>Brightness</li>
+ * 		<li>Gamma</li>
+ * 		<li>Model</li>
+ * 		<li>Temperature(C)</li>
+ * 		<li>VersionFPGA</li>
+ * 		<li>VersionMCU</li>
+ * 		<li>VersionSoftware</li>
+ * 		<li>VideoBlackout</li>
+ * 		<li>VideoFreeze</li>
+ * 		<li>VideoMapping</li>
+ * 		<li>VideoTest</li>
+ * 		<li>Voltage(V)</li>
+ * 		<li>ProfileType</li>
+ * 		<li>HealthState</li>
  *
  * @author Kevin / Symphony Dev Team<br>
  * Created on 3/26/2024
@@ -428,7 +500,7 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 		}
 		nextDevicesCollectionIterationTimestamp = System.currentTimeMillis();
 		updateValidRetrieveStatisticsTimestamp();
-		for (Map.Entry<String, Map<String,JsonNode>> entry : cachedData.entrySet()) {
+		for (Map.Entry<String, Map<String, JsonNode>> entry : cachedData.entrySet()) {
 			if (entry.getValue().size() == 1) {
 				return Collections.emptyList();
 			}
@@ -541,7 +613,7 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 	 */
 	private void retrieveDeviceAsset(String deviceName) {
 		try {
-			for (ProfileType profileType: ProfileType.values()) {
+			for (ProfileType profileType : ProfileType.values()) {
 				if (!profileType.getName().equalsIgnoreCase(ProfileType.NOVASTAR_SCREEN.getName())) {
 					String url = createFilterUrl(profileType, deviceName);
 					JsonNode response = this.doGet(url, JsonNode.class);
@@ -653,7 +725,7 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 	 * create a specific url for fetching asset type base on screen name
 	 */
 	private String createFilterUrl(ProfileType profileType, String screenName) {
-		 return String.format(NanoSuiteConstant.FILTER_ASSET_URL, profileType.getValue(), !StringUtils.isNullOrEmpty(this.screenNameFilter)? this.screenNameFilter : screenName);
+		return String.format(NanoSuiteConstant.FILTER_ASSET_URL, profileType.getValue(), !StringUtils.isNullOrEmpty(this.screenNameFilter) ? this.screenNameFilter : screenName);
 	}
 
 	/**
@@ -689,7 +761,7 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 	 * @param deviceInfos cache data to contain aggregated device information.
 	 * @param aggregatedDevice aggregated device information.
 	 */
-	private void populateMonitoringProperties(Map<String, String> stats, Map<String, String> dynamicStats, Map<String,JsonNode> deviceInfos, AggregatedDevice aggregatedDevice) {
+	private void populateMonitoringProperties(Map<String, String> stats, Map<String, String> dynamicStats, Map<String, JsonNode> deviceInfos, AggregatedDevice aggregatedDevice) {
 		try {
 			for (Map.Entry<String, JsonNode> deviceInfo : deviceInfos.entrySet()) {
 				JsonNode deviceNode = deviceInfo.getValue();
@@ -697,7 +769,7 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 				if (deviceNode == null || !deviceNode.isArray()) continue;
 				List<AggregatedDeviceInfo> devices = objectMapper.readerFor(new TypeReference<List<AggregatedDeviceInfo>>() {}).readValue(deviceNode);
 
-				for (AggregatedDeviceInfo device: devices) {
+				for (AggregatedDeviceInfo device : devices) {
 					if (device != null) {
 						// general info
 						Map<String, Object> metadata = convertObjectToMap(device.getMetadata());
@@ -754,7 +826,7 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 
 						// overall health state of asset group
 						DeviceMetric overallHealthState = device.getOverallHealthState();
-            if (overallHealthState!= null) {
+						if (overallHealthState != null) {
 							String lastValue = checkNullOrEmptyValue(overallHealthState.getLastValue());
 							String group = metricGroup + NanoSuiteConstant.HEALTHSTATE;
 							if (NanoSuiteConstant.NONE.equals(lastValue)) {
@@ -764,7 +836,7 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 
 							HealthStateStatus lastHealth = HealthStateStatus.getByValue(Integer.parseInt(overallHealthState.getLastValue()));
 							stats.put(group, lastHealth == null ? NanoSuiteConstant.NONE : checkNullOrEmptyValue(lastHealth.getName()));
-            }
+						}
 					}
 				}
 			}
@@ -841,7 +913,7 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 		}
 		try {
 			double doubleNumber = Double.parseDouble(value);
-			return doubleNumber == (long) doubleNumber? String.valueOf((long) doubleNumber) :  String.valueOf(doubleNumber);
+			return doubleNumber == (long) doubleNumber ? String.valueOf((long) doubleNumber) : String.valueOf(doubleNumber);
 		} catch (NumberFormatException e) {
 			return NanoSuiteConstant.NONE;
 		}

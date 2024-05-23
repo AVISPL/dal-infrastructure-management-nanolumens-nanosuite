@@ -77,6 +77,4 @@ public enum SenderMetric {
 				.findFirst()
 				.orElse(null);
 	}
-
-
 }
