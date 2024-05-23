@@ -46,10 +46,10 @@ public enum ProfileType {
 	}
 
 	/**
-   * Retrieves {@link ProfileType} by {@link #value}
-   *
-   * @param value {@link #value}
-   * @return {@link ProfileType}
+	 * Retrieves {@link ProfileType} by {@link #value}
+	 *
+	 * @param value {@link #value}
+	 * @return {@link ProfileType}
 	 */
 	public static ProfileType getByValue(String value) {
 		return Arrays.stream(values())

@@ -9,6 +9,9 @@ import java.net.ConnectException;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -48,6 +51,7 @@ import com.avispl.symphony.dal.infrastructure.management.nanolumens.nanosuite.co
 import com.avispl.symphony.dal.infrastructure.management.nanolumens.nanosuite.common.NanoSuiteConstant;
 import com.avispl.symphony.dal.infrastructure.management.nanolumens.nanosuite.common.PingMode;
 import com.avispl.symphony.dal.infrastructure.management.nanolumens.nanosuite.common.ProfileType;
+import com.avispl.symphony.dal.infrastructure.management.nanolumens.nanosuite.common.SubSystemInformation;
 import com.avispl.symphony.dal.infrastructure.management.nanolumens.nanosuite.common.SystemInformation;
 import com.avispl.symphony.dal.infrastructure.management.nanolumens.nanosuite.metric.ReceiverMetric;
 import com.avispl.symphony.dal.infrastructure.management.nanolumens.nanosuite.metric.ScreenMetric;
@@ -66,18 +70,18 @@ import com.avispl.symphony.dal.util.StringUtils;
  *
  * General Info Aggregated Device:
  * <ul>
- *   <li>deviceId</li>
- *   <li>deviceOnline</li>
- *   <li>deviceName</li>
- *   <li>deviceModel</li>
- *   </li>HealthState</li>
- *   <li>SubsystemName</li>
- *   <li>SubsystemId</li>
+ * 		<li>deviceId</li>
+ * 		<li>deviceOnline</li>
+ * 		<li>deviceName</li>
+ * 		<li>deviceModel</li>
+ * 		</li>HealthState</li>
+ * 		<li>SubsystemName</li>
+ * 		<li>SubsystemId</li>
  * </ul>
  *
  * Sender Asset Group
  * <ul>
- *   	<li>InputSource</li>
+ * 		<li>InputSource</li>
  * 		<li>InputValidDisplayPort</li>
  * 		<li>InputValidDVI1</li>
  * 		<li>InputValidDVI2</li>
@@ -95,59 +99,59 @@ import com.avispl.symphony.dal.util.StringUtils;
  *
  * Receiver Asset Group
  * <ul>
- *   	<li>BrightnessBlue</li>
- * 		<li>BrightnessGreen</li>
- * 		<li>BrightnessRed</li>
- * 		<li>BrightnessVRed</li>
- * 		<li>Brightness</li>
- * 		<li>Gamma</li>
- * 		<li>Model</li>
- * 		<li>Temperature(C)</li>
- * 		<li>VersionFPGA</li>
- * 		<li>VersionMCU</li>
- * 		<li>VersionSoftware</li>
- * 		<li>VideoBlackout</li>
- * 		<li>VideoFreeze</li>
- * 		<li>VideoMapping</li>
- * 		<li>VideoTest</li>
- * 		<li>Voltage(V)</li>
- * 		<li>ProfileType</li>
- * 		<li>HealthState</li>
+ *   <li>BrightnessBlue</li>
+ *   <li>BrightnessGreen</li>
+ *   <li>BrightnessRed</li>
+ *   <li>BrightnessVRed</li>
+ *   <li>Brightness</li>
+ *   <li>Gamma</li>
+ *   <li>Model</li>
+ *   <li>Temperature(C)</li>
+ *   <li>VersionFPGA</li>
+ *   <li>VersionMCU</li>
+ *   <li>VersionSoftware</li>
+ *   <li>VideoBlackout</li>
+ *   <li>VideoFreeze</li>
+ *   <li>VideoMapping</li>
+ *   <li>VideoTest</li>
+ *   <li>Voltage(V)</li>
+ *   <li>ProfileType</li>
+ *   <li>HealthState</li>
  * </ul>
  *
  * Screen Asset Group
  * <ul>
- *   	<li>InputSource</li>
- * 		<li>InputValidDisplayPort</li>
- * 		<li>InputValidDVI1</li>
- * 		<li>InputValidDVI2</li>
- * 		<li>InputValidDVI3</li>
- * 		<li>InputValidDVI4</li>
- * 		<li>InputValidSDI</li>
- * 		<li>InputValid</li>
- * 		<li>Model</li>
- * 		<li>SerialNumber</li>
- * 		<li>VersionFPGA</li>
- * 		<li>VersionMCU</li>
- *   	<li>BrightnessBlue</li>
- * 		<li>BrightnessGreen</li>
- * 		<li>BrightnessRed</li>
- * 		<li>BrightnessVRed</li>
- * 		<li>Brightness</li>
- * 		<li>Gamma</li>
- * 		<li>Model</li>
- * 		<li>Temperature(C)</li>
- * 		<li>VersionFPGA</li>
- * 		<li>VersionMCU</li>
- * 		<li>VersionSoftware</li>
- * 		<li>VideoBlackout</li>
- * 		<li>VideoFreeze</li>
- * 		<li>VideoMapping</li>
- * 		<li>VideoTest</li>
- * 		<li>Voltage(V)</li>
- * 		<li>ProfileType</li>
- * 		<li>HealthState</li>
- *
+ *   <li>InputSource</li>
+ *   <li>InputValidDisplayPort</li>
+ *   <li>InputValidDVI1</li>
+ *   <li>InputValidDVI2</li>
+ *   <li>InputValidDVI3</li>
+ *   <li>InputValidDVI4</li>
+ *   <li>InputValidSDI</li>
+ *   <li>InputValid</li>
+ *   <li>Model</li>
+ *   <li>SerialNumber</li>
+ *   <li>VersionFPGA</li>
+ *   <li>VersionMCU</li>
+ *   <li>BrightnessBlue</li>
+ *   <li>BrightnessGreen</li>
+ *   <li>BrightnessRed</li>
+ *   <li>BrightnessVRed</li>
+ *   <li>Brightness</li>
+ *   <li>Gamma</li>
+ *   <li>Model</li>
+ *   <li>Temperature(C)</li>
+ *   <li>VersionFPGA</li>
+ *   <li>VersionMCU</li>
+ *   <li>VersionSoftware</li>
+ *   <li>VideoBlackout</li>
+ *   <li>VideoFreeze</li>
+ *   <li>VideoMapping</li>
+ *   <li>VideoTest</li>
+ *   <li>Voltage(V)</li>
+ *   <li>ProfileType</li>
+ *   <li>HealthState</li>
+ * </ul>
  * @author Kevin / Symphony Dev Team<br>
  * Created on 3/26/2024
  * @since 1.0.0
@@ -260,6 +264,11 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 	private String screenNameFilter;
 
 	/**
+	 * NanoSuite subsystem id;
+	 */
+	private String nanoSuiteSubsystemId;
+
+	/**
 	 * Update the status of the device.
 	 * The device is considered as paused if did not receive any retrieveMultipleStatistics()
 	 * calls during {@link NanoSuiteCommunicator}
@@ -319,6 +328,11 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 	 * System Response for aggregator
 	 */
 	private SystemInformation systemInformation = new SystemInformation();
+
+	/**
+	 * Subsystem Response for aggregator
+	 */
+	private SubSystemInformation subSystemInformation = new SubSystemInformation();
 
 	/**
 	 * Ping mode
@@ -480,7 +494,8 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 			ExtendedStatistics extendedStatistics = new ExtendedStatistics();
 			retrieveSystemInfo();
 			retrieveScreenAsset();
-			populateSystemInfo(statistics);
+			retrieveSubSystemInfo();
+			populateAggregatorInfo(statistics);
 			extendedStatistics.setStatistics(statistics);
 			localExtendedStatistics = extendedStatistics;
 		} finally {
@@ -575,15 +590,22 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 	}
 
 	/**
-	 * Populates system information into the provided stats map
-	 * System information includes properties from the {@link SystemInformation} object.
+	 * Populates aggregator information into the provided stats map
 	 *
 	 * @param stats The map to store system information properties.
 	 */
-	private void populateSystemInfo(Map<String, String> stats) {
+	private void populateAggregatorInfo(Map<String, String> stats) {
+		// Isaac workspace information
 		Map<String, Object> properties = convertObjectToMap(systemInformation);
 		for (Map.Entry<String, Object> entry : properties.entrySet()) {
 			stats.put(entry.getKey(), checkNullOrEmptyValue(entry.getValue()));
+		}
+
+		// NanoSuite module information
+		Map<String, Object> subsystemProperties = convertObjectToMap(subSystemInformation);
+    for (Map.Entry<String, Object> entry : subsystemProperties.entrySet()) {
+			String propertyName = NanoSuiteConstant.NANOSUITE_GROUP + entry.getKey();
+			stats.put(propertyName, entry.getKey().equals(NanoSuiteConstant.LAST_CONTACTED_AT) ? convertTimestampToFormattedDate(checkNullOrEmptyValue(entry.getValue())) : checkNullOrEmptyValue(entry.getValue()));
 		}
 	}
 
@@ -652,6 +674,29 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 	}
 
 	/**
+	 * Get NanoSuite subsystem information by sending GET request to NanoSuite API endpoint.
+	 *
+	 * @throws FailedLoginException If there's an issue with the login credentials. This could happen if the password is incorrect.
+	 * @throws ResourceNotReachableException If there's an error reaching the NanoSuite API or retrieving subsystem information.
+	 */
+	private void retrieveSubSystemInfo() throws Exception {
+		try {
+			if (StringUtils.isNullOrEmpty(nanoSuiteSubsystemId)) return;
+
+			JsonNode response = this.doGet(String.format(NanoSuiteConstant.SUBSYSTEM_URL, this.nanoSuiteSubsystemId), JsonNode.class);
+			if (response != null && !response.has(NanoSuiteConstant.ERROR)) {
+			   subSystemInformation = objectMapper.treeToValue(response, SubSystemInformation.class);
+			}
+		} catch (FailedLoginException e) {
+			throw new FailedLoginException("Error when login to system. Please check the credentials");
+		} catch (CommandFailureException e) {
+			throw new ResourceNotReachableException("An error occurred when retrieving the NanoSuite subsystem information with current subsystemId " + this.nanoSuiteSubsystemId , e);
+		} catch (Exception e) {
+			logger.error(String.format("An error occurred when retrieving the NanoSuite subsystem information with current subsystemId: %s and error message: %s",this.nanoSuiteSubsystemId, e.getMessage()), e);
+		}
+	}
+
+	/**
 	 * Retrieve list of screens to monitoring by send GET request to NanoSuite API endpoint.
 	 *
 	 * @throws FailedLoginException If there's an issue with the login credentials. This could happen if the password is incorrect.
@@ -672,6 +717,11 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 
 					String screenName = metadata.get(NanoSuiteConstant.NOVASTAR_SCREEN_NAME).asText();
 					if (screenName == null) continue;
+
+					String subSystemId = metadata.get("subsystemId").asText();
+					if (StringUtils.isNotNullOrEmpty(subSystemId)) {
+						this.nanoSuiteSubsystemId = subSystemId;
+					}
 
 					Map<String, JsonNode> assets = new HashMap<>();
 					assets.put(ProfileType.NOVASTAR_SCREEN.getValue(), objectMapper.createArrayNode().add(device));
@@ -939,5 +989,27 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 			result = NanoSuiteConstant.DEFAULT_NUMBER_THREAD;
 		}
 		return result;
+	}
+
+	/**
+	 * Converts the ISO-8601 value to a formatted date string.
+	 * If the input value is {@link NanoSuiteConstant#NONE}, it returns the same value.
+	 *
+	 * @param input The timestamp value to convert.
+	 * @return The formatted date string.
+	 */
+	private String convertTimestampToFormattedDate(String input) {
+		if (NanoSuiteConstant.NONE.equals(input)) {
+			return input;
+		}
+		try {
+			ZonedDateTime zonedDateTime = ZonedDateTime.parse(input);
+			ZoneId utc = ZoneId.of("UTC");
+			ZonedDateTime zonedDateTimeUtc = zonedDateTime.withZoneSameInstant(utc);
+			return DateTimeFormatter.ofPattern(NanoSuiteConstant.TARGET_FORMAT_DATETIME).format(zonedDateTimeUtc);
+		} catch (Exception e) {
+			logger.error(String.format("Error when convert ISO-8601 datetime string to Formatted Date with value %s", input), e);
+			return NanoSuiteConstant.NONE;
+		}
 	}
 }

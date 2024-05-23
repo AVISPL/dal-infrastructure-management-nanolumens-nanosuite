@@ -69,10 +69,10 @@ public enum ReceiverMetric {
 	}
 
 	/**
-   * Retrieves {@link ReceiverMetric} by {@link #value}
-   *
-   * @param value {@link #value}
-   * @return {@link ReceiverMetric}
+	 * Retrieves {@link ReceiverMetric} by {@link #value}
+	 *
+	 * @param value {@link #value}
+	 * @return {@link ReceiverMetric}
 	 */
 	 public static ReceiverMetric getByValue(String value) {
 		 return Arrays.stream(values())

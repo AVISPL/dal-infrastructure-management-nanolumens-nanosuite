@@ -46,10 +46,10 @@ public enum HealthStateStatus {
 	}
 
 	/**
-   * Retrieves {@link HealthStateStatus} by {@link #value}
-   *
-   * @param value {@link #value}
-   * @return {@link HealthStateStatus}
+	 * Retrieves {@link HealthStateStatus} by {@link #value}
+	 *
+	 * @param value {@link #value}
+	 * @return {@link HealthStateStatus}
 	 */
 	 public static HealthStateStatus getByValue(int value) {
 		 return Arrays.stream(values())

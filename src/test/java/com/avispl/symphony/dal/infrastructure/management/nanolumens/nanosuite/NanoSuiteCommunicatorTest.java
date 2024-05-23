@@ -13,10 +13,10 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
-import javax.security.auth.login.FailedLoginException;
 import org.junit.Assert;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import com.avispl.symphony.api.dal.dto.monitor.ExtendedStatistics;
@@ -30,6 +30,7 @@ import com.avispl.symphony.api.dal.error.ResourceNotReachableException;
  * Created on 4/1/2024
  * @since 1.0.0
  */
+@Tag("Real Device")
 class NanoSuiteCommunicatorTest {
 	private ExtendedStatistics extendedStatistic;
 	private NanoSuiteCommunicator nanoSuiteCommunicator;
@@ -117,7 +118,14 @@ class NanoSuiteCommunicatorTest {
 	void testGetAggregatorData() throws Exception {
 		extendedStatistic = (ExtendedStatistics) nanoSuiteCommunicator.getMultipleStatistics().get(0);
 		Map<String, String> statistics = extendedStatistic.getStatistics();
-		Assert.assertEquals(3, statistics.size());
+		Assert.assertEquals(9, statistics.size());
+		Assert.assertEquals("R&D NanoSuite Test", statistics.get("SystemName"));
+		Assert.assertEquals("ISAAC", statistics.get("SystemHostname"));
+		Assert.assertEquals("Canada/Eastern", statistics.get("Timezone"));
+		Assert.assertEquals("nanosuite", statistics.get("NanoSuite#Type"));
+		Assert.assertEquals("NanoSuite", statistics.get("NanoSuite#Name"));
+		Assert.assertEquals("None", statistics.get("NanoSuite#Description"));
+		Assert.assertEquals("8562891", statistics.get("NanoSuite#ModuleId"));
 	}
 
 	/**
