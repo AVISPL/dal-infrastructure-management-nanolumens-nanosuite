@@ -15,9 +15,9 @@ import java.util.Arrays;
  */
 public enum ProfileType {
 
-	NOVASTAR_RECEIVER("Novastar Receiver", "novastar_receiver"),
-	NOVASTAR_SENDER("Novastar Sender", "novastar_sender"),
-	NOVASTAR_SCREEN("Novastar Screen", "novastar_screen");
+	NOVASTAR_RECEIVER("Receiver Card", "novastar_receiver"),
+	NOVASTAR_SENDER("Sender Card", "novastar_sender"),
+	NOVASTAR_SCREEN("Screen", "novastar_screen");
 
 	private String name;
 	private String value;
