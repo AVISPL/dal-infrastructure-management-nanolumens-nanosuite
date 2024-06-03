@@ -9,9 +9,6 @@ import java.net.ConnectException;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -51,8 +48,8 @@ import com.avispl.symphony.dal.infrastructure.management.nanolumens.nanosuite.co
 import com.avispl.symphony.dal.infrastructure.management.nanolumens.nanosuite.common.NanoSuiteConstant;
 import com.avispl.symphony.dal.infrastructure.management.nanolumens.nanosuite.common.PingMode;
 import com.avispl.symphony.dal.infrastructure.management.nanolumens.nanosuite.common.ProfileType;
-import com.avispl.symphony.dal.infrastructure.management.nanolumens.nanosuite.common.SubSystemInformation;
 import com.avispl.symphony.dal.infrastructure.management.nanolumens.nanosuite.common.SystemInformation;
+import com.avispl.symphony.dal.infrastructure.management.nanolumens.nanosuite.metric.MetricMappingValue;
 import com.avispl.symphony.dal.infrastructure.management.nanolumens.nanosuite.metric.ReceiverMetric;
 import com.avispl.symphony.dal.infrastructure.management.nanolumens.nanosuite.metric.ScreenMetric;
 import com.avispl.symphony.dal.infrastructure.management.nanolumens.nanosuite.metric.SenderMetric;
@@ -259,16 +256,6 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 	private static final long retrieveStatisticsTimeOut = 3 * 60 * 1000;
 
 	/**
-	 * Filter screen name
-	 */
-	private String screenNameFilter;
-
-	/**
-	 * NanoSuite subsystem id;
-	 */
-	private String nanoSuiteSubsystemId;
-
-	/**
 	 * Update the status of the device.
 	 * The device is considered as paused if did not receive any retrieveMultipleStatistics()
 	 * calls during {@link NanoSuiteCommunicator}
@@ -320,6 +307,11 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 	private final List<AggregatedDevice> aggregatedDeviceList = Collections.synchronizedList(new ArrayList<>());
 
 	/**
+	 * List of device screen name
+	 */
+	private final List<String> deviceScreenName = Collections.synchronizedList(new ArrayList<>());
+
+	/**
 	 * cache data for aggregated
 	 */
 	private final Map<String, Map<String,JsonNode>> cachedData = Collections.synchronizedMap(new HashMap<>());
@@ -328,11 +320,6 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 	 * System Response for aggregator
 	 */
 	private SystemInformation systemInformation = new SystemInformation();
-
-	/**
-	 * Subsystem Response for aggregator
-	 */
-	private SubSystemInformation subSystemInformation = new SubSystemInformation();
 
 	/**
 	 * Ping mode
@@ -386,24 +373,6 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 	 */
 	public void setNumberThreads(String numberThreads) {
 		this.numberThreads = numberThreads;
-	}
-
-	/**
-	 * Retrieves {@link #screenNameFilter}
-	 *
-	 * @return value of {@link #screenNameFilter}
-	 */
-	public String getScreenNameFilter() {
-		return screenNameFilter;
-	}
-
-	/**
-	 * Sets {@link #screenNameFilter} value
-	 *
-	 * @param screenNameFilter new value of {@link #screenNameFilter}
-	 */
-	public void setScreenNameFilter(String screenNameFilter) {
-		this.screenNameFilter = screenNameFilter;
 	}
 
 	/**
@@ -494,7 +463,6 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 			ExtendedStatistics extendedStatistics = new ExtendedStatistics();
 			retrieveSystemInfo();
 			retrieveScreenAsset();
-			retrieveSubSystemInfo();
 			populateAggregatorInfo(statistics);
 			extendedStatistics.setStatistics(statistics);
 			localExtendedStatistics = extendedStatistics;
@@ -600,13 +568,6 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 		for (Map.Entry<String, Object> entry : properties.entrySet()) {
 			stats.put(entry.getKey(), checkNullOrEmptyValue(entry.getValue()));
 		}
-
-		// NanoSuite module information
-		Map<String, Object> subsystemProperties = convertObjectToMap(subSystemInformation);
-    for (Map.Entry<String, Object> entry : subsystemProperties.entrySet()) {
-			String propertyName = NanoSuiteConstant.NANOSUITE_GROUP + entry.getKey();
-			stats.put(propertyName, entry.getKey().equals(NanoSuiteConstant.LAST_CONTACTED_AT) ? convertTimestampToFormattedDate(checkNullOrEmptyValue(entry.getValue())) : checkNullOrEmptyValue(entry.getValue()));
-		}
 	}
 
 	/**
@@ -673,28 +634,6 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 		}
 	}
 
-	/**
-	 * Get NanoSuite subsystem information by sending GET request to NanoSuite API endpoint.
-	 *
-	 * @throws FailedLoginException If there's an issue with the login credentials. This could happen if the password is incorrect.
-	 * @throws ResourceNotReachableException If there's an error reaching the NanoSuite API or retrieving subsystem information.
-	 */
-	private void retrieveSubSystemInfo() throws Exception {
-		try {
-			if (StringUtils.isNullOrEmpty(nanoSuiteSubsystemId)) return;
-
-			JsonNode response = this.doGet(String.format(NanoSuiteConstant.SUBSYSTEM_URL, this.nanoSuiteSubsystemId), JsonNode.class);
-			if (response != null && !response.has(NanoSuiteConstant.ERROR)) {
-			   subSystemInformation = objectMapper.treeToValue(response, SubSystemInformation.class);
-			}
-		} catch (FailedLoginException e) {
-			throw new FailedLoginException("Error when login to system. Please check the credentials");
-		} catch (CommandFailureException e) {
-			throw new ResourceNotReachableException("An error occurred when retrieving the NanoSuite subsystem information with current subsystemId " + this.nanoSuiteSubsystemId , e);
-		} catch (Exception e) {
-			logger.error(String.format("An error occurred when retrieving the NanoSuite subsystem information with current subsystemId: %s and error message: %s",this.nanoSuiteSubsystemId, e.getMessage()), e);
-		}
-	}
 
 	/**
 	 * Retrieve list of screens to monitoring by send GET request to NanoSuite API endpoint.
@@ -704,10 +643,11 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 	 */
 	private void retrieveScreenAsset() throws Exception {
 		try {
-			String uri = StringUtils.isNullOrEmpty(this.screenNameFilter) ? NanoSuiteConstant.SCREEN_ASSET_URL : createFilterUrl(ProfileType.NOVASTAR_SCREEN, this.screenNameFilter);
+			String uri = NanoSuiteConstant.SCREEN_ASSET_URL;
 			JsonNode response = this.doGet(uri, JsonNode.class);
 
 			if (response != null && !StringUtils.isNullOrEmpty(response.toString()) && !NanoSuiteConstant.ERROR.contains(response.toString()) && response.isArray()) {
+				deviceScreenName.clear();
 				List<JsonNode> devices = objectMapper.readerFor(new TypeReference<List<JsonNode>>(){}).readValue(response);
 				if (devices == null || devices.isEmpty()) return;
 
@@ -718,14 +658,10 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 					String screenName = metadata.get(NanoSuiteConstant.NOVASTAR_SCREEN_NAME).asText();
 					if (screenName == null) continue;
 
-					String subSystemId = metadata.get("subsystemId").asText();
-					if (StringUtils.isNotNullOrEmpty(subSystemId)) {
-						this.nanoSuiteSubsystemId = subSystemId;
-					}
-
 					Map<String, JsonNode> assets = new HashMap<>();
 					assets.put(ProfileType.NOVASTAR_SCREEN.getValue(), objectMapper.createArrayNode().add(device));
 					updateCacheData(screenName, assets);
+					deviceScreenName.add(screenName);
 				}
 			}
 		} catch (FailedLoginException e) {
@@ -755,6 +691,15 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 	}
 
 	/**
+	 * Remove unknown aggregated device in cached
+	 */
+	private void updateAggregatedDevice() {
+		List<String> unknownAggregatedDevice = cachedData.keySet().stream().filter(screenName -> !deviceScreenName.contains(screenName)).collect(Collectors.toList());
+		unknownAggregatedDevice.forEach(cachedData::remove);
+		aggregatedDeviceList.clear();
+	}
+
+	/**
 	 * Waits for the completion of all futures in the provided list and then shuts down the executor service.
 	 *
 	 * @param futures The list of Future objects representing asynchronous tasks.
@@ -775,7 +720,7 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 	 * create a specific url for fetching asset type base on screen name
 	 */
 	private String createFilterUrl(ProfileType profileType, String screenName) {
-		return String.format(NanoSuiteConstant.FILTER_ASSET_URL, profileType.getValue(), !StringUtils.isNullOrEmpty(this.screenNameFilter) ? this.screenNameFilter : screenName);
+		return String.format(NanoSuiteConstant.FILTER_ASSET_URL, profileType.getValue(), screenName);
 	}
 
 	/**
@@ -785,12 +730,12 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 	 */
 	private List<AggregatedDevice> cloneAndPopulateAggregatedDeviceList() {
 		synchronized (cachedData) {
-			aggregatedDeviceList.clear();
+			updateAggregatedDevice();
 			cachedData.forEach((deviceName, info) -> {
 				AggregatedDevice aggregatedDevice = new AggregatedDevice();
-				aggregatedDevice.setDeviceModel(deviceName);
+				aggregatedDevice.setDeviceModel(NanoSuiteConstant.DEVICE_MODEL);
 				aggregatedDevice.setDeviceName(deviceName);
-				aggregatedDevice.setDeviceOnline(true);
+				aggregatedDevice.setDeviceOnline(false);
 
 				Map<String, String> stats = new HashMap<>();
 				Map<String, String> dynamicStats = new HashMap<>();
@@ -845,13 +790,13 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 										if (isHistoricalProperty && !NanoSuiteConstant.NONE.equals(value)) {
 											dynamicStats.put(receiverAssetGroup, roundDoubleValue(value));
 										} else {
-											stats.put(receiverAssetGroup, NumberUtils.isCreatable(value) ? roundDoubleValue(value): value);
+											stats.put(receiverAssetGroup, NumberUtils.isCreatable(value) ? roundDoubleValue(value): mappingValueForMetric(receiverMetric.getName(), value));
 										}
 										break;
 									case NOVASTAR_SENDER:
 										SenderMetric senderMetric = SenderMetric.getByValue(metric.getMetricType());
 										String senderAssetGroup = metricGroup + senderMetric.getName();
-										stats.put(senderAssetGroup, checkNullOrEmptyValue(metric.getLastValue()));
+										stats.put(senderAssetGroup, checkNullOrEmptyValue(mappingValueForMetric(senderMetric.getName(), metric.getLastValue())));
 										break;
 									case NOVASTAR_SCREEN:
 										String screenMetric = ScreenMetric.getByValue(metric.getMetricType());
@@ -874,7 +819,7 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 							}
 						}
 
-						// overall health state of asset group
+						// overall health state of each asset group
 						DeviceMetric overallHealthState = device.getOverallHealthState();
 						if (overallHealthState != null) {
 							String lastValue = checkNullOrEmptyValue(overallHealthState.getLastValue());
@@ -886,6 +831,9 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 
 							HealthStateStatus lastHealth = HealthStateStatus.getByValue(Integer.parseInt(overallHealthState.getLastValue()));
 							stats.put(group, lastHealth == null ? NanoSuiteConstant.NONE : checkNullOrEmptyValue(lastHealth.getName()));
+							if (lastHealth != null && lastHealth != HealthStateStatus.ERROR) {
+								aggregatedDevice.setDeviceOnline(true);
+							}
 						}
 					}
 				}
@@ -992,24 +940,22 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 	}
 
 	/**
-	 * Converts the ISO-8601 value to a formatted date string.
-	 * If the input value is {@link NanoSuiteConstant#NONE}, it returns the same value.
+	 * Mapping value to display for specific metric
 	 *
-	 * @param input The timestamp value to convert.
-	 * @return The formatted date string.
+	 * @param metricName name of metric
 	 */
-	private String convertTimestampToFormattedDate(String input) {
-		if (NanoSuiteConstant.NONE.equals(input)) {
-			return input;
+	private String mappingValueForMetric(String metricName, String value) {
+		MetricMappingValue mappingValue = MetricMappingValue.getByName(metricName);
+		if (mappingValue == null) return value;
+		String propertyValue = value;
+
+		if (NanoSuiteConstant.TRUE.equals(propertyValue)) {
+			propertyValue = mappingValue.getEnableValue();
 		}
-		try {
-			ZonedDateTime zonedDateTime = ZonedDateTime.parse(input);
-			ZoneId utc = ZoneId.of("UTC");
-			ZonedDateTime zonedDateTimeUtc = zonedDateTime.withZoneSameInstant(utc);
-			return DateTimeFormatter.ofPattern(NanoSuiteConstant.TARGET_FORMAT_DATETIME).format(zonedDateTimeUtc);
-		} catch (Exception e) {
-			logger.error(String.format("Error when convert ISO-8601 datetime string to Formatted Date with value %s", input), e);
-			return NanoSuiteConstant.NONE;
+		if (NanoSuiteConstant.FALSE.equals(propertyValue)) {
+			propertyValue = mappingValue.getDisableValue();
 		}
+
+		return propertyValue;
 	}
 }

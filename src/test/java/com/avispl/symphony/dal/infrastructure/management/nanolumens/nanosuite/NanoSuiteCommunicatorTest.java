@@ -118,14 +118,10 @@ class NanoSuiteCommunicatorTest {
 	void testGetAggregatorData() throws Exception {
 		extendedStatistic = (ExtendedStatistics) nanoSuiteCommunicator.getMultipleStatistics().get(0);
 		Map<String, String> statistics = extendedStatistic.getStatistics();
-		Assert.assertEquals(9, statistics.size());
+		Assert.assertEquals(3, statistics.size());
 		Assert.assertEquals("R&D NanoSuite Test", statistics.get("SystemName"));
 		Assert.assertEquals("ISAAC", statistics.get("SystemHostname"));
 		Assert.assertEquals("Canada/Eastern", statistics.get("Timezone"));
-		Assert.assertEquals("nanosuite", statistics.get("NanoSuite#Type"));
-		Assert.assertEquals("NanoSuite", statistics.get("NanoSuite#Name"));
-		Assert.assertEquals("None", statistics.get("NanoSuite#Description"));
-		Assert.assertEquals("8562891", statistics.get("NanoSuite#ModuleId"));
 	}
 
 	/**
@@ -138,6 +134,7 @@ class NanoSuiteCommunicatorTest {
 		nanoSuiteCommunicator.retrieveMultipleStatistics();
 		Thread.sleep(10000);
 
+		nanoSuiteCommunicator.getMultipleStatistics();
 		List<AggregatedDevice> aggregatedDeviceList = nanoSuiteCommunicator.retrieveMultipleStatistics();
 		String deviceId = "408";
 		Optional<AggregatedDevice> aggregatedDevice = aggregatedDeviceList.stream().filter(item -> item.getDeviceId().equals(deviceId)).findFirst();
@@ -145,7 +142,7 @@ class NanoSuiteCommunicatorTest {
 			Map<String, String> stats = aggregatedDevice.get().getProperties();
 
 			assertEquals("408", aggregatedDevice.get().getDeviceId());
-			assertEquals("MCTRL4K", aggregatedDevice.get().getDeviceModel());
+			assertEquals("Nixel", aggregatedDevice.get().getDeviceModel());
 			assertEquals("MCTRL4K", aggregatedDevice.get().getDeviceName());
 			assertEquals(true, aggregatedDevice.get().getDeviceOnline());
 			assertEquals("56", stats.get("SubsystemId"));
@@ -217,19 +214,5 @@ class NanoSuiteCommunicatorTest {
 				assertEquals(8, aggregatedDevice.getDynamicStatistics().size());
 			}
 		}
-	}
-
-	/**
-	 * Test filter by screen name
-	 */
-	@Test
-	void testScreenNameFilter() throws Exception {
-		nanoSuiteCommunicator.setScreenNameFilter("MSD600");
-		nanoSuiteCommunicator.getMultipleStatistics();
-		nanoSuiteCommunicator.retrieveMultipleStatistics();
-		Thread.sleep(10000);
-		List<AggregatedDevice> aggregatedDeviceList = nanoSuiteCommunicator.retrieveMultipleStatistics();
-		assertEquals(1, aggregatedDeviceList.size());
-		assertEquals("MSD600", aggregatedDeviceList.get(0).getDeviceName());
 	}
 }
