@@ -10,7 +10,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 
 import org.junit.Assert;
@@ -147,72 +146,6 @@ class NanoSuiteCommunicatorTest {
 			assertEquals(true, aggregatedDevice.get().getDeviceOnline());
 			assertEquals("56", stats.get("SubsystemId"));
 			assertEquals("NanoSuite", stats.get("SubsystemName"));
-		}
-	}
-
-	/**
-	 * Test case for retrieving multiple statistics with historical properties set to "Voltage(V)".
-	 */
-	@Test
-	void testMultipleStatisticWithVoltageHistorical() throws Exception {
-		nanoSuiteCommunicator.setHistoricalProperties("Voltage(V)");
-		nanoSuiteCommunicator.getMultipleStatistics();
-		nanoSuiteCommunicator.retrieveMultipleStatistics();
-		Thread.sleep(10000);
-
-		List<AggregatedDevice> aggregatedDeviceList = nanoSuiteCommunicator.retrieveMultipleStatistics();
-		for (AggregatedDevice aggregatedDevice : aggregatedDeviceList) {
-			if (Objects.equals(aggregatedDevice.getDeviceId(), "408")) {
-				assertEquals(8, aggregatedDevice.getDynamicStatistics().size());
-			}
-
-			if (Objects.equals(aggregatedDevice.getDeviceId(), "409")) {
-				assertEquals(4, aggregatedDevice.getDynamicStatistics().size());
-			}
-		}
-	}
-
-	/**
-	 * Test case for retrieving multiple statistics with historical properties set to "Temperature(C)".
-	 */
-	@Test
-	void testMultipleStatisticWithTemperatureHistorical() throws Exception {
-		nanoSuiteCommunicator.setHistoricalProperties("Temperature(C)");
-		nanoSuiteCommunicator.getMultipleStatistics();
-		nanoSuiteCommunicator.retrieveMultipleStatistics();
-		Thread.sleep(10000);
-
-		List<AggregatedDevice> aggregatedDeviceList = nanoSuiteCommunicator.retrieveMultipleStatistics();
-		for (AggregatedDevice aggregatedDevice : aggregatedDeviceList) {
-			if (Objects.equals(aggregatedDevice.getDeviceId(), "408")) {
-				assertEquals(8, aggregatedDevice.getDynamicStatistics().size());
-			}
-
-			if (Objects.equals(aggregatedDevice.getDeviceId(), "409")) {
-				assertEquals(4, aggregatedDevice.getDynamicStatistics().size());
-			}
-		}
-	}
-
-	/**
-	 * Test case for retrieving multiple statistics with historical properties set to "Voltage(V), Temperature(C)".
-	 */
-	@Test
-	void testMultipleStatisticWithHistorical() throws Exception {
-		nanoSuiteCommunicator.setHistoricalProperties("Voltage(V), Temperature(C)");
-		nanoSuiteCommunicator.getMultipleStatistics();
-		nanoSuiteCommunicator.retrieveMultipleStatistics();
-		Thread.sleep(10000);
-
-		List<AggregatedDevice> aggregatedDeviceList = nanoSuiteCommunicator.retrieveMultipleStatistics();
-		for (AggregatedDevice aggregatedDevice : aggregatedDeviceList) {
-			if (Objects.equals(aggregatedDevice.getDeviceId(), "408")) {
-				assertEquals(16, aggregatedDevice.getDynamicStatistics().size());
-			}
-
-			if (Objects.equals(aggregatedDevice.getDeviceId(), "409")) {
-				assertEquals(8, aggregatedDevice.getDynamicStatistics().size());
-			}
 		}
 	}
 }

@@ -10,14 +10,11 @@ import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -327,35 +324,9 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 	private PingMode pingMode = PingMode.ICMP;
 
 	/**
-	 * Configurable property for historical properties, comma separated values kept as set locally
-	 */
-	private final Set<String> historicalProperties = new HashSet<>();
-
-	/**
 	 * Number of thread
 	 */
 	private String numberThreads;
-
-	/**
-	 * Retrieves {@link #historicalProperties}
-	 *
-	 * @return value of {@link #historicalProperties}
-	 */
-	public String getHistoricalProperties() {
-		return String.join(",", this.historicalProperties);
-	}
-
-	/**
-	 * Sets {@link #historicalProperties} value
-	 *
-	 * @param historicalProperties new value of {@link #historicalProperties}
-	 */
-	public void setHistoricalProperties(String historicalProperties) {
-		this.historicalProperties.clear();
-		Arrays.asList(historicalProperties.split(",")).forEach(propertyName -> {
-			this.historicalProperties.add(propertyName.trim());
-		});
-	}
 
 	/**
 	 * Retrieves {@link #numberThreads}
@@ -738,10 +709,8 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 				aggregatedDevice.setDeviceOnline(false);
 
 				Map<String, String> stats = new HashMap<>();
-				Map<String, String> dynamicStats = new HashMap<>();
-				populateMonitoringProperties(stats, dynamicStats, info, aggregatedDevice);
+				populateMonitoringProperties(stats, info, aggregatedDevice);
 				aggregatedDevice.setProperties(stats);
-				aggregatedDevice.setDynamicStatistics(dynamicStats);
 				aggregatedDeviceList.add(aggregatedDevice);
 			});
 		}
@@ -752,11 +721,10 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 	 * Populate monitoring properties including general device info, device assets.
 	 *
 	 * @param stats map to store monitor properties.
-	 * @param dynamicStats map to store historical properties
 	 * @param deviceInfos cache data to contain aggregated device information.
 	 * @param aggregatedDevice aggregated device information.
 	 */
-	private void populateMonitoringProperties(Map<String, String> stats, Map<String, String> dynamicStats, Map<String, JsonNode> deviceInfos, AggregatedDevice aggregatedDevice) {
+	private void populateMonitoringProperties(Map<String, String> stats, Map<String, JsonNode> deviceInfos, AggregatedDevice aggregatedDevice) {
 		try {
 			for (Map.Entry<String, JsonNode> deviceInfo : deviceInfos.entrySet()) {
 				JsonNode deviceNode = deviceInfo.getValue();
@@ -784,14 +752,9 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 									case NOVASTAR_RECEIVER:
 										ReceiverMetric receiverMetric = ReceiverMetric.getByValue(metric.getMetricType());
 										String receiverAssetGroup = metricGroup + receiverMetric.getName();
-										boolean isHistoricalProperty = !historicalProperties.isEmpty() && historicalProperties.contains(receiverMetric.getName());
 
 										String value = checkNullOrEmptyValue(metric.getLastValue());
-										if (isHistoricalProperty && !NanoSuiteConstant.NONE.equals(value)) {
-											dynamicStats.put(receiverAssetGroup, roundDoubleValue(value));
-										} else {
-											stats.put(receiverAssetGroup, NumberUtils.isCreatable(value) ? roundDoubleValue(value): mappingValueForMetric(receiverMetric.getName(), value));
-										}
+										stats.put(receiverAssetGroup, NumberUtils.isCreatable(value) ? roundDoubleValue(value): mappingValueForMetric(receiverMetric.getName(), value));
 										break;
 									case NOVASTAR_SENDER:
 										SenderMetric senderMetric = SenderMetric.getByValue(metric.getMetricType());
