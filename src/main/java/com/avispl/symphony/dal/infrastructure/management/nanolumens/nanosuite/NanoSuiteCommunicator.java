@@ -601,7 +601,7 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 		} catch (CommandFailureException e) {
 			throw new ResourceNotReachableException("An error occurred when retrieving the system information", e);
 		} catch (Exception e) {
-			logger.error(String.format("An error occurred when retrieving the system information %s", e.getMessage()), e);
+			logger.error("An error occurred when retrieving the system information ", e);
 		}
 	}
 
@@ -640,7 +640,7 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 		} catch (CommandFailureException e) {
 			throw new ResourceNotReachableException("An error occurred when retrieving the screen asset information", e);
 		} catch (Exception e) {
-			logger.error(String.format("An error occurred when retrieving the screen asset information. %s", e.getMessage()), e);
+			logger.error("An error occurred when retrieving the screen asset information. ", e);
 		}
 	}
 
@@ -823,6 +823,8 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 	 */
 	public Map<String, Object> convertObjectToMap(Object obj) {
 		Map<String, Object> map = new HashMap<>();
+		if (obj == null) return map;
+
 		for (Field field : obj.getClass().getDeclaredFields()) {
 			field.setAccessible(true);
 			try {
