@@ -4,6 +4,7 @@
 
 package com.avispl.symphony.dal.infrastructure.management.nanolumens.nanosuite;
 
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.ConnectException;
 import java.net.Socket;
@@ -15,6 +16,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -171,7 +173,7 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 			loop:
 			while (inProgress) {
 				try {
-					TimeUnit.MICROSECONDS.sleep(500);
+					TimeUnit.MILLISECONDS.sleep(500);
 				} catch (InterruptedException e) {
 					logger.info(String.format("Sleep for 0.5 second was interrupted with error message: %s", e.getMessage()));
 				}
@@ -189,12 +191,6 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 					logger.debug("Fetching other than aggregated device list");
 				}
 
-				long currentTimestamp = System.currentTimeMillis();
-				if (!flag && nextDevicesCollectionIterationTimestamp <= currentTimestamp) {
-					populateDeviceDetails();
-					flag = true;
-				}
-
 				while (nextDevicesCollectionIterationTimestamp > System.currentTimeMillis()) {
 					try {
 						TimeUnit.MILLISECONDS.sleep(1000);
@@ -207,13 +203,19 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 					break loop;
 				}
 
-				if (flag) {
-					nextDevicesCollectionIterationTimestamp = System.currentTimeMillis() + 30000;
-					flag = false;
+				long startCycle = System.currentTimeMillis();
+				if (!flag && nextDevicesCollectionIterationTimestamp <= startCycle) {
+					populateDeviceDetails();
+					flag = true;
 				}
 
-				if (logger.isDebugEnabled()) {
-					logger.debug("Finished collecting devices statistics cycle at " + new Date());
+				if (flag) {
+					nextDevicesCollectionIterationTimestamp = System.currentTimeMillis() + (getMonitoringRate() * systemMonitoringCycleInterval);
+					lastMonitoringCycleDuration =  Math.max((System.currentTimeMillis() - startCycle) / 1000, 1L);
+					if (logger.isDebugEnabled()) {
+						logger.debug("Finished collecting devices statistics cycle at " + new Date() + ", total duration: " + lastMonitoringCycleDuration);
+					}
+					flag = false;
 				}
 			}
 		}
@@ -238,6 +240,27 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 	 * is set to currentTime + 30s, at the same time, calling {@link #retrieveMultipleStatistics()} and updating the
 	 */
 	private long nextDevicesCollectionIterationTimestamp;
+
+	/**
+	 * Current monitoring cycle interval - amount of time that passes between 2 consecutive getMultipleStatistics calls
+	 * 60000ms by default
+	 * */
+	private final long systemMonitoringCycleInterval = 60000L;
+
+	/**
+	 * How much time last monitoring cycle took to finish
+	 */
+	private long lastMonitoringCycleDuration;
+
+	/**
+	 * Adapter metadata properties - adapter version and build date
+	 */
+	private Properties adapterProperties;
+
+	/**
+	 * Device adapter instantiation timestamp.
+	 */
+	private long adapterInitializationTimestamp;
 
 	/**
 	 * This parameter holds timestamp of when we need to stop performing API calls
@@ -367,7 +390,9 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 	/**
 	 * Constructs a new instance of NanoSuiteCommunicator.
 	 */
-	public NanoSuiteCommunicator() {
+	public NanoSuiteCommunicator() throws IOException {
+		adapterProperties = new Properties();
+		adapterProperties.load(getClass().getResourceAsStream("/version.properties"));
 		this.setTrustAllCertificates(true);
 	}
 
@@ -431,11 +456,14 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 		reentrantLock.lock();
 		try {
 			Map<String, String> statistics = new HashMap<>();
+			Map<String, String> dynamicStatistics = new HashMap<>();
 			ExtendedStatistics extendedStatistics = new ExtendedStatistics();
+			retrieveMetadata(statistics, dynamicStatistics);
 			retrieveSystemInfo();
 			retrieveScreenAsset();
 			populateAggregatorInfo(statistics);
 			extendedStatistics.setStatistics(statistics);
+			extendedStatistics.setDynamicStatistics(dynamicStatistics);
 			localExtendedStatistics = extendedStatistics;
 		} finally {
 			reentrantLock.unlock();
@@ -486,6 +514,7 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 		if (logger.isDebugEnabled()) {
 			logger.debug("Internal init is called.");
 		}
+		adapterInitializationTimestamp = System.currentTimeMillis();
 		executorService = Executors.newFixedThreadPool(1);
 		executorService.submit(deviceDataLoader = new NanoSuiteDataLoader());
 		super.internalInit();
@@ -538,6 +567,30 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 		Map<String, Object> properties = convertObjectToMap(systemInformation);
 		for (Map.Entry<String, Object> entry : properties.entrySet()) {
 			stats.put(entry.getKey(), checkNullOrEmptyValue(entry.getValue()));
+		}
+	}
+
+	/**
+	 * Retrieves metadata information and updates the provided statistics and dynamic map.
+	 *
+	 * @param stats the map where statistics will be stored
+	 * @param dynamicStatistics the map where dynamic statistics will be stored
+	 */
+	private void retrieveMetadata(Map<String, String> stats, Map<String, String> dynamicStatistics) {
+		try {
+			dynamicStatistics.put(NanoSuiteConstant.MONITORING_CYCLE_DURATION, String.valueOf(lastMonitoringCycleDuration));
+			stats.put(NanoSuiteConstant.ADAPTER_VERSION,
+					getDefaultValueForNullData(adapterProperties.getProperty("aggregator.version")));
+			stats.put(NanoSuiteConstant.ADAPTER_BUILD_DATE,
+					getDefaultValueForNullData(adapterProperties.getProperty("aggregator.build.date")));
+			long adapterUptime = System.currentTimeMillis() - adapterInitializationTimestamp;
+
+			stats.put(NanoSuiteConstant.ADAPTER_UPTIME_MIN, String.valueOf(adapterUptime / (1000 * 60)));
+			stats.put(NanoSuiteConstant.ADAPTER_UPTIME, normalizeUptime(adapterUptime / 1000));
+			stats.put(NanoSuiteConstant.SYSTEM_MONITORING_CYCLE, String.valueOf(getMonitoringRate()));
+			dynamicStatistics.put(NanoSuiteConstant.MONITORED_DEVICES_TOTAL, String.valueOf(aggregatedDeviceList.size()));
+		} catch (Exception e) {
+			logger.error("Failed to populate metadata information", e);
 		}
 	}
 
@@ -902,6 +955,48 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 			result = NanoSuiteConstant.DEFAULT_NUMBER_THREAD;
 		}
 		return result;
+	}
+
+	/**
+	 * check value is null or empty
+	 *
+	 * @param value input value
+	 * @return value after checking
+	 */
+	private String getDefaultValueForNullData(String value) {
+		return StringUtils.isNotNullOrEmpty(value) ? value : NanoSuiteConstant.NONE;
+	}
+
+	/**
+	 * Uptime is received in seconds, need to normalize it and make it human-readable, like
+	 * 1 day 5 hour 12 minute 55 minute
+	 * Incoming parameter is may have a decimal point, so in order to safely process this - it's rounded first.
+	 * We don't need to add a segment of time if it's 0.
+	 *
+	 * @param uptimeSeconds value in seconds
+	 * @return string value of format 'x d x hr x min x sec'
+	 */
+	private String normalizeUptime(long uptimeSeconds) {
+		StringBuilder normalizedUptime = new StringBuilder();
+
+		long seconds = uptimeSeconds % 60;
+		long minutes = uptimeSeconds % 3600 / 60;
+		long hours = uptimeSeconds % 86400 / 3600;
+		long days = uptimeSeconds / 86400;
+
+		if (days > 0) {
+			normalizedUptime.append(days).append(" d ");
+		}
+		if (hours > 0) {
+			normalizedUptime.append(hours).append(" hr ");
+		}
+		if (minutes > 0) {
+			normalizedUptime.append(minutes).append(" min ");
+		}
+		if (seconds > 0) {
+			normalizedUptime.append(seconds).append(" sec");
+		}
+		return normalizedUptime.toString().trim();
 	}
 
 	/**
