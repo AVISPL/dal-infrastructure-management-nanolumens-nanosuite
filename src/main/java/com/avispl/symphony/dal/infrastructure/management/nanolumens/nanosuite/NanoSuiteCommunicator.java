@@ -210,7 +210,12 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 				}
 
 				if (flag) {
-					nextDevicesCollectionIterationTimestamp = System.currentTimeMillis() + (getMonitoringRate() * systemMonitoringCycleInterval);
+					try {
+						nextDevicesCollectionIterationTimestamp = System.currentTimeMillis() + (getMonitoringRate() * systemMonitoringCycleInterval);
+					} catch (NoSuchMethodError nsme) {
+						nextDevicesCollectionIterationTimestamp = System.currentTimeMillis() + systemMonitoringCycleInterval;
+						logger.warn("Unsupported feature: getMonitoringRate isn't available on current Cloud Connector version.", nsme);
+					}
 					lastMonitoringCycleDuration =  Math.max((System.currentTimeMillis() - startCycle) / 1000, 1L);
 					if (logger.isDebugEnabled()) {
 						logger.debug("Finished collecting devices statistics cycle at " + new Date() + ", total duration: " + lastMonitoringCycleDuration);
@@ -587,7 +592,11 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 
 			stats.put(NanoSuiteConstant.ADAPTER_UPTIME_MIN, String.valueOf(adapterUptime / (1000 * 60)));
 			stats.put(NanoSuiteConstant.ADAPTER_UPTIME, normalizeUptime(adapterUptime / 1000));
-			stats.put(NanoSuiteConstant.SYSTEM_MONITORING_CYCLE, String.valueOf(getMonitoringRate()));
+			try {
+				stats.put(NanoSuiteConstant.SYSTEM_MONITORING_CYCLE, String.valueOf(getMonitoringRate()));
+			} catch (NoSuchMethodError nsme) {
+				logger.warn("Unsupported feature: getMonitoringRate isn't available on current Cloud Connector version.", nsme);
+			}
 			dynamicStatistics.put(NanoSuiteConstant.MONITORED_DEVICES_TOTAL, String.valueOf(aggregatedDeviceList.size()));
 		} catch (Exception e) {
 			logger.error("Failed to populate metadata information", e);
