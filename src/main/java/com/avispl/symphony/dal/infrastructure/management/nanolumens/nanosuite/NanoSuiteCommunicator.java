@@ -205,15 +205,16 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 
 				long startCycle = System.currentTimeMillis();
 				if (!flag && nextDevicesCollectionIterationTimestamp <= startCycle) {
-					populateDeviceDetails();
+					collectData();
 					flag = true;
 				}
 
 				if (flag) {
+					// fixed rate: the next pass starts one monitoring interval after this one started, not after it ended
 					try {
-						nextDevicesCollectionIterationTimestamp = System.currentTimeMillis() + (getMonitoringRate() * systemMonitoringCycleInterval);
+						nextDevicesCollectionIterationTimestamp = startCycle + (getMonitoringRate() * systemMonitoringCycleInterval);
 					} catch (NoSuchMethodError nsme) {
-						nextDevicesCollectionIterationTimestamp = System.currentTimeMillis() + systemMonitoringCycleInterval;
+						nextDevicesCollectionIterationTimestamp = startCycle + systemMonitoringCycleInterval;
 						logger.warn("Unsupported feature: getMonitoringRate isn't available on current Cloud Connector version.", nsme);
 					}
 					lastMonitoringCycleDuration =  Math.max((System.currentTimeMillis() - startCycle) / 1000, 1L);
@@ -256,6 +257,12 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 	 * How much time last monitoring cycle took to finish
 	 */
 	private long lastMonitoringCycleDuration;
+
+	/**
+	 * Login or connection error of the last collection pass, reported by {@link #getMultipleStatistics()}; null when
+	 * the last pass reached the NanoSuite API
+	 */
+	private volatile Exception lastCollectionError;
 
 	/**
 	 * Adapter metadata properties - adapter version and build date
@@ -463,9 +470,16 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 			Map<String, String> statistics = new HashMap<>();
 			Map<String, String> dynamicStatistics = new HashMap<>();
 			ExtendedStatistics extendedStatistics = new ExtendedStatistics();
+			// data is collected by NanoSuiteDataLoader at the monitoring rate; this call doesn't wait on the NanoSuite API
+			updateValidRetrieveStatisticsTimestamp();
+			Exception collectionError = lastCollectionError;
+			if (collectionError instanceof FailedLoginException) {
+				throw new FailedLoginException(collectionError.getMessage());
+			}
+			if (collectionError instanceof ResourceNotReachableException) {
+				throw new ResourceNotReachableException(collectionError.getMessage(), collectionError);
+			}
 			retrieveMetadata(statistics, dynamicStatistics);
-			retrieveSystemInfo();
-			retrieveScreenAsset();
 			populateAggregatorInfo(statistics);
 			extendedStatistics.setStatistics(statistics);
 			extendedStatistics.setDynamicStatistics(dynamicStatistics);
@@ -485,7 +499,6 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 			executorService = Executors.newFixedThreadPool(1);
 			executorService.submit(deviceDataLoader = new NanoSuiteDataLoader());
 		}
-		nextDevicesCollectionIterationTimestamp = System.currentTimeMillis();
 		updateValidRetrieveStatisticsTimestamp();
 		for (Map.Entry<String, Map<String, JsonNode>> entry : cachedData.entrySet()) {
 			if (entry.getValue().size() == 1) {
@@ -604,6 +617,24 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 	}
 
 	/**
+	 * One collection pass, run by {@link NanoSuiteDataLoader}: system information, screen list, then device details.
+	 * A login or connection error stops the pass and is reported by the next {@link #getMultipleStatistics()} call.
+	 */
+	private void collectData() {
+		try {
+			retrieveSystemInfo();
+			retrieveScreenAsset();
+			lastCollectionError = null;
+			populateDeviceDetails();
+		} catch (FailedLoginException | ResourceNotReachableException e) {
+			lastCollectionError = e;
+			logger.warn("NanoSuite collection pass stopped: " + e.getMessage(), e);
+		} catch (Throwable t) {
+			logger.error("NanoSuite collection pass failed", t);
+		}
+	}
+
+	/**
 	 * Populates device details using multiple threads.
 	 * Retrieves aggregated data for each device in the cached concurrently.
 	 */
@@ -662,6 +693,9 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 			throw new FailedLoginException("Error when login to system. Please check the credentials");
 		} catch (CommandFailureException e) {
 			throw new ResourceNotReachableException("An error occurred when retrieving the system information", e);
+		} catch (ResourceNotReachableException e) {
+			// timeout / connection error: stop the collection pass instead of waiting for the next request's timeout
+			throw e;
 		} catch (Exception e) {
 			logger.error("An error occurred when retrieving the system information ", e);
 		}
@@ -701,6 +735,8 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 			throw new FailedLoginException("Error when login to system. Please check the credentials");
 		} catch (CommandFailureException e) {
 			throw new ResourceNotReachableException("An error occurred when retrieving the screen asset information", e);
+		} catch (ResourceNotReachableException e) {
+			throw e;
 		} catch (Exception e) {
 			logger.error("An error occurred when retrieving the screen asset information. ", e);
 		}
