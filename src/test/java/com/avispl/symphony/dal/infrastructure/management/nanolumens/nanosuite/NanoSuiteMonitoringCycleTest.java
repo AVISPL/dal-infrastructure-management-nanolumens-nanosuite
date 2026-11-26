@@ -12,7 +12,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
+import com.avispl.symphony.api.dal.dto.monitor.ExtendedStatistics;
 import com.avispl.symphony.api.dal.error.ResourceNotReachableException;
+import com.avispl.symphony.dal.infrastructure.management.nanolumens.nanosuite.common.NanoSuiteConstant;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 
 /**
  * The Symphony monitoring call doesn't wait on the NanoSuite API, and a collection pass stops at the first timeout
@@ -34,6 +39,32 @@ public class NanoSuiteMonitoringCycleTest {
 		protected <Response> Response doGet(String uri, Class<Response> responseClass) {
 			getCalls.incrementAndGet();
 			throw new ResourceNotReachableException("Cannot reach resource at " + uri + ": Read timed out");
+		}
+	}
+
+	/** Communicator whose NanoSuite returns two screens, each with asset details. */
+	static class TwoScreensCommunicator extends NanoSuiteCommunicator {
+		private final ObjectMapper mapper = new ObjectMapper();
+
+		TwoScreensCommunicator() throws java.io.IOException {
+			super();
+		}
+
+		@Override
+		@SuppressWarnings("unchecked")
+		protected <Response> Response doGet(String uri, Class<Response> responseClass) {
+			if (uri.equals(NanoSuiteConstant.ISSAC_SETTING_URL)) {
+				return (Response) mapper.createObjectNode();
+			}
+			ArrayNode array = mapper.createArrayNode();
+			if (uri.equals(NanoSuiteConstant.SCREEN_ASSET_URL)) {
+				for (String name : new String[] { "Screen 1", "Screen 2" }) {
+					array.addObject().putObject(NanoSuiteConstant.METADATA).put(NanoSuiteConstant.NOVASTAR_SCREEN_NAME, name);
+				}
+			} else {
+				array.addObject();
+			}
+			return (Response) (JsonNode) array;
 		}
 	}
 
@@ -73,5 +104,17 @@ public class NanoSuiteMonitoringCycleTest {
 		int calls = communicator.getCalls.get();
 		Assertions.assertThrows(ResourceNotReachableException.class, () -> communicator.getMultipleStatistics());
 		Assertions.assertEquals(calls, communicator.getCalls.get());
+	}
+
+	@Test
+	void testMonitoredDevicesTotalCountsCollectedDevices() throws Throwable {
+		TwoScreensCommunicator twoScreens = new TwoScreensCommunicator();
+		twoScreens.setHost("127.0.0.1");
+		Method method = NanoSuiteCommunicator.class.getDeclaredMethod("collectData");
+		method.setAccessible(true);
+		method.invoke(twoScreens);
+		ExtendedStatistics stats = (ExtendedStatistics) twoScreens.getMultipleStatistics().get(0);
+		Assertions.assertEquals("2", stats.getDynamicStatistics().get(NanoSuiteConstant.MONITORED_DEVICES_TOTAL),
+				"total must match the collected devices before retrieveMultipleStatistics is called");
 	}
 }
