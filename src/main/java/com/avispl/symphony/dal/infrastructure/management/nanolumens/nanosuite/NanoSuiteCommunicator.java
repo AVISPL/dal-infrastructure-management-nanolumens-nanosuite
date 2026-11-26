@@ -554,9 +554,8 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 			executorService.shutdownNow();
 			executorService = null;
 		}
-		if (localExtendedStatistics != null && localExtendedStatistics.getStatistics() != null) {
-			localExtendedStatistics.getStatistics().clear();
-		}
+		// don't clear the map: Symphony may still hold the statistics returned by the last getMultipleStatistics call
+		localExtendedStatistics = null;
 		nextDevicesCollectionIterationTimestamp = 0;
 		aggregatedDeviceList.clear();
 		cachedData.clear();
@@ -610,7 +609,7 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 			} catch (NoSuchMethodError nsme) {
 				logger.warn("Unsupported feature: getMonitoringRate isn't available on current Cloud Connector version.", nsme);
 			}
-			dynamicStatistics.put(NanoSuiteConstant.MONITORED_DEVICES_TOTAL, String.valueOf(aggregatedDeviceList.size()));
+			dynamicStatistics.put(NanoSuiteConstant.MONITORED_DEVICES_TOTAL, String.valueOf(countMonitoredDevices()));
 		} catch (Exception e) {
 			logger.error("Failed to populate metadata information", e);
 		}
@@ -756,6 +755,27 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 			}
 			map.putAll(value);
 			cachedData.put(deviceName, map);
+		}
+	}
+
+	/**
+	 * Number of devices {@link #retrieveMultipleStatistics()} returns from the collected data. Counted from the cache,
+	 * not aggregatedDeviceList, which is only filled after getMultipleStatistics in the same monitoring cycle.
+	 *
+	 * @return number of monitored devices
+	 */
+	private int countMonitoredDevices() {
+		synchronized (cachedData) {
+			int total = 0;
+			for (Map.Entry<String, Map<String, JsonNode>> entry : cachedData.entrySet()) {
+				if (entry.getValue().size() == 1) {
+					return 0;
+				}
+				if (deviceScreenName.contains(entry.getKey())) {
+					total++;
+				}
+			}
+			return total;
 		}
 	}
 
