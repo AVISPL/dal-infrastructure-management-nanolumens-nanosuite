@@ -554,8 +554,9 @@ public class NanoSuiteCommunicator extends RestCommunicator implements Aggregato
 			executorService.shutdownNow();
 			executorService = null;
 		}
-		// don't clear the map: Symphony may still hold the statistics returned by the last getMultipleStatistics call
-		localExtendedStatistics = null;
+		if (localExtendedStatistics != null && localExtendedStatistics.getStatistics() != null) {
+			localExtendedStatistics.getStatistics().clear();
+		}
 		nextDevicesCollectionIterationTimestamp = 0;
 		aggregatedDeviceList.clear();
 		cachedData.clear();

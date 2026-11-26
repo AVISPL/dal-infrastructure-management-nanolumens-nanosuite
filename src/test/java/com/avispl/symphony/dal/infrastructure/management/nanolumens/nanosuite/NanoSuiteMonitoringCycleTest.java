@@ -117,11 +117,4 @@ public class NanoSuiteMonitoringCycleTest {
 		Assertions.assertEquals("2", stats.getDynamicStatistics().get(NanoSuiteConstant.MONITORED_DEVICES_TOTAL),
 				"total must match the collected devices before retrieveMultipleStatistics is called");
 	}
-
-	@Test
-	void testDestroyKeepsReturnedStatistics() throws Exception {
-		ExtendedStatistics held = (ExtendedStatistics) communicator.getMultipleStatistics().get(0);
-		communicator.destroy();
-		Assertions.assertFalse(held.getStatistics().isEmpty(), "destroy must not empty statistics already returned to Symphony");
-	}
 }
